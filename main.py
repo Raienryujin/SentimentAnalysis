@@ -8,7 +8,10 @@ from nltk.corpus import stopwords
 import string
 
 # Download NLTK data
-nltk.download('stopwords')
+try:
+    stopwords.words('english')
+except LookupError:
+    nltk.download('stopwords')
 
 # Load dataset (example dataset)
 data = pd.read_csv('sentiment_data.csv')  # Ensure you have a CSV file with 'text' and 'sentiment' columns
