@@ -3,18 +3,28 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.pipeline import Pipeline
 import nltk
 from nltk.corpus import stopwords
 import string
 
-# Download NLTK data
+# Configuration
+DATA_PATH = 'sentiment_data.csv'
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
+MAX_ITER = 200
+
+# Download NLTK data if not already available
 try:
     stopwords.words('english')
 except LookupError:
     nltk.download('stopwords')
 
-# Load dataset (example dataset)
-data = pd.read_csv('sentiment_data.csv')  # Ensure you have a CSV file with 'text' and 'sentiment' columns
+# Load dataset
+data = pd.read_csv(DATA_PATH)
+
+# Handle missing data
+data.dropna(subset=['text', 'sentiment'], inplace=True)
 
 # Preprocess text data
 def preprocess_text(text):
@@ -27,19 +37,19 @@ def preprocess_text(text):
 data['text'] = data['text'].apply(preprocess_text)
 
 # Split data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(data['text'], data['sentiment'], test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(data['text'], data['sentiment'], test_size=TEST_SIZE, random_state=RANDOM_STATE)
 
-# Vectorize text data using TF-IDF
-vectorizer = TfidfVectorizer()
-X_train_vec = vectorizer.fit_transform(X_train)
-X_test_vec = vectorizer.transform(X_test)
+# Create a pipeline for vectorization and classification
+pipeline = Pipeline([
+    ('vectorizer', TfidfVectorizer()),
+    ('classifier', LogisticRegression(max_iter=MAX_ITER))
+])
 
-# Train a Logistic Regression classifier
-model = LogisticRegression(max_iter=200)
-model.fit(X_train_vec, y_train)
+# Train the model
+pipeline.fit(X_train, y_train)
 
 # Predict sentiments
-y_pred = model.predict(X_test_vec)
+y_pred = pipeline.predict(X_test)
 
 # Calculate accuracy
 accuracy = accuracy_score(y_test, y_pred)
@@ -48,10 +58,9 @@ print(f'Accuracy: {accuracy}')
 # Function to predict sentiment of new text
 def predict_sentiment(text):
     text = preprocess_text(text)
-    text_vec = vectorizer.transform([text])
-    prediction = model.predict(text_vec)
+    prediction = pipeline.predict([text])
     return prediction[0]
 
 # Example usage
-new_text = "I hate this movie"
+new_text = "I hate this movie, its horrible"
 print(predict_sentiment(new_text))
